@@ -3,25 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fairblock Engine</title>
+    <title>Fairblock Cosmic Engine</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
-        #video_container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: #000; }
+        #video_container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.4; display: block; }
         #canvas { position: fixed; top: 0; left: 0; z-index: 1; pointer-events: none; }
         #loader {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
             color: #fff; z-index: 10; font-family: sans-serif;
-            background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px);
-            padding: 12px 25px; border-radius: 30px; font-size: 11px;
-            border: 1px solid rgba(88, 189, 246, 0.3); text-transform: uppercase; letter-spacing: 2px;
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px);
+            padding: 10px 25px; border-radius: 30px; font-size: 11px;
+            border: 1px solid rgba(88, 189, 246, 0.4); text-transform: uppercase; letter-spacing: 2px;
         }
     </style>
 </head>
 <body>
-    <div id="loader">Инициализация Fairblock...</div>
+    <div id="loader">Загрузка Fairblock...</div>
     <div id="video_container"><video id="input_video" playsinline muted autoplay></video></div>
     <canvas id="canvas"></canvas>
 
@@ -33,12 +33,11 @@
 
         let particles = [];
         let logoPoints = [];
-        const particleCount = 3500; // Оптимально для четкости текста
+        const particleCount = 4000; // Больше частиц для четкости текста
         let handPos = { x: 0.5, y: 0.5, isFist: false };
         let lastFistState = false;
 
-        // Цвета Fairblock
-        const brandColors = ['#58BDF6', '#718BD2', '#ffffff'];
+        const brandColors = ['#58BDF6', '#718BD2', '#FFFFFF'];
         const starColors = ['#ffffff', '#fffce0', '#d0e8ff'];
 
         function resize() {
@@ -50,15 +49,13 @@
 
         function prepareLogo() {
             const logoImg = new Image();
-            logoImg.crossOrigin = "Anonymous";
             logoImg.src = 'logo.png';
-            
             logoImg.onload = () => {
                 const tempCanvas = document.createElement('canvas');
                 const tCtx = tempCanvas.getContext('2d');
                 
-                // Увеличиваем размер сканирования для четкости Fairblock
-                const tw = 600; 
+                // Fairblock длинный, ставим ширину 700 для четкости
+                const tw = 700; 
                 const th = tw * (logoImg.height / logoImg.width);
                 tempCanvas.width = tw;
                 tempCanvas.height = th;
@@ -66,51 +63,43 @@
                 tCtx.drawImage(logoImg, 0, 0, tw, th);
                 const imageData = tCtx.getImageData(0, 0, tw, th).data;
                 
-                logoPoints = [];
-                // Шаг 3 для высокой плотности точек в буквах
-                for (let y = 0; y < th; y += 3) {
-                    for (let x = 0; x < tw; x += 3) {
+                let rawPoints = [];
+                for (let y = 0; y < th; y += 2) { // Мелкий шаг для точности
+                    for (let x = 0; x < tw; x += 2) {
                         const i = (y * tw + x) * 4;
-                        const r = imageData[i];
-                        const g = imageData[i+1];
-                        const b = imageData[i+2];
-                        const a = imageData[i+3];
+                        const brightness = (imageData[i] + imageData[i+1] + imageData[i+2]) / 3;
+                        const alpha = imageData[i+3];
 
-                        // Умный фильтр: берем пиксель, если он НЕ прозрачный И НЕ белый
-                        // (Это отсекает белый фон, если логотип не на прозрачности)
-                        const brightness = (r + g + b) / 3;
-                        if (a > 128 && brightness < 240) {
-                            logoPoints.push({ x: x - tw/2, y: y - th/2 });
+                        // Берем только темные/цветные пиксели (логотип) и игнорируем прозрачность/фон
+                        if (alpha > 128 && brightness < 200) {
+                            rawPoints.push({ x: x - tw/2, y: y - th/2 });
                         }
                     }
                 }
-                loader.innerText = "Система готова: сожми кулак";
-            };
-            
-            logoImg.onerror = () => {
-                loader.innerText = "Ошибка: logo.png не найден в папке";
+
+                // КЛЮЧЕВОЙ МОМЕНТ: Перемешиваем точки, чтобы логотип собирался равномерно
+                logoPoints = rawPoints.sort(() => Math.random() - 0.5);
+                loader.innerText = "Fairblock Ready. Clench your fist!";
             };
         }
 
         class Particle {
             constructor() {
-                this.reset(true);
+                this.init(true);
             }
 
-            reset(randomPos = false) {
+            init(randomPos = false) {
                 this.x = randomPos ? Math.random() * canvas.width : this.x;
                 this.y = randomPos ? Math.random() * canvas.height : this.y;
-                this.baseSize = Math.random() * 1.5 + 0.5;
-                this.size = this.baseSize;
-                this.vx = (Math.random() - 0.5) * 1.5;
-                this.vy = (Math.random() - 0.5) * 1.5;
+                this.size = Math.random() * 1.5 + 0.5;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
                 this.color = starColors[Math.floor(Math.random() * starColors.length)];
-                this.history = [];
             }
 
             explode() {
                 const angle = Math.random() * Math.PI * 2;
-                const speed = 40 + Math.random() * 50;
+                const speed = 45 + Math.random() * 40;
                 this.vx = Math.cos(angle) * speed;
                 this.vy = Math.sin(angle) * speed;
             }
@@ -120,34 +109,27 @@
                     const idx = particles.indexOf(this) % logoPoints.length;
                     const target = logoPoints[idx];
                     
+                    // Центрирование + усиленный LERP (0.3)
                     const tx = (handPos.x * canvas.width) + target.x;
                     const ty = (handPos.y * canvas.height) + target.y;
 
-                    // Притяжение к логотипу + легкая вибрация
-                    this.x += (tx - this.x) * 0.2 + (Math.random() - 0.5) * 0.5;
-                    this.y += (ty - this.y) * 0.2 + (Math.random() - 0.5) * 0.5;
+                    this.x += (tx - this.x) * 0.3; 
+                    this.y += (ty - this.y) * 0.3;
                     
-                    this.color = brandColors[particles.indexOf(this) % brandColors.length];
-                    this.size = this.baseSize * 1.2;
+                    this.color = brandColors[idx % brandColors.length];
                 } else {
-                    // Режим звездного космоса
                     this.x += this.vx;
                     this.y += this.vy;
                     this.vx *= 0.96;
                     this.vy *= 0.96;
-
-                    this.size = this.baseSize;
+                    
                     this.color = starColors[Math.floor(Math.random() * starColors.length)];
 
-                    // Если звезда остановилась, даем ей медленный дрейф
-                    if (Math.abs(this.vx) < 0.2) this.vx = (Math.random() - 0.5) * 0.8;
-                    if (Math.abs(this.vy) < 0.2) this.vy = (Math.random() - 0.5) * 0.8;
+                    if (Math.abs(this.vx) < 0.2) this.vx += (Math.random() - 0.5) * 0.5;
+                    if (Math.abs(this.vy) < 0.2) this.vy += (Math.random() - 0.5) * 0.5;
 
-                    // Бесконечный экран
-                    if (this.x < 0) this.x = canvas.width;
-                    if (this.x > canvas.width) this.x = 0;
-                    if (this.y < 0) this.y = canvas.height;
-                    if (this.y > canvas.height) this.y = 0;
+                    if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                    if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
                 }
             }
 
@@ -169,14 +151,13 @@
 
         function loop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let i = 0; i < particles.length; i++) {
-                particles[i].update();
-                particles[i].draw();
+            for (let p of particles) {
+                p.update();
+                p.draw();
             }
             requestAnimationFrame(loop);
         }
 
-        // Настройка детекции руки
         const hands = new Hands({
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
         });
@@ -188,28 +169,21 @@
             minTrackingConfidence: 0.6
         });
 
-        hands.onResults((results) => {
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const hand = results.multiHandLandmarks[0];
-                
-                // Центрируем логотип по суставу среднего пальца (точка 9)
+        hands.onResults((res) => {
+            if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
+                const hand = res.multiHandLandmarks[0];
                 handPos.x = 1 - hand[9].x;
                 handPos.y = hand[9].y;
 
-                // Проверка кулака: кончики пальцев ниже их оснований
-                let closedFingers = 0;
-                const tips = [8, 12, 16, 20];
-                const bases = [6, 10, 14, 18];
-                for (let i = 0; i < 4; i++) {
-                    if (hand[tips[i]].y > hand[bases[i]].y) closedFingers++;
-                }
-                handPos.isFist = closedFingers >= 3;
+                let closed = 0;
+                [8, 12, 16, 20].forEach(i => {
+                    if (hand[i].y > hand[i-2].y) closed++;
+                });
+                handPos.isFist = closed >= 3;
 
-                if (lastFistState === true && handPos.isFist === false) {
-                    particles.forEach(p => p.explode());
-                }
+                if (lastFistState && !handPos.isFist) particles.forEach(p => p.explode());
                 lastFistState = handPos.isFist;
-                loader.style.opacity = "0.2";
+                loader.style.opacity = "0.1";
             } else {
                 if (lastFistState) particles.forEach(p => p.explode());
                 handPos.isFist = false;
@@ -219,15 +193,11 @@
         });
 
         const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await hands.send({image: videoElement});
-            },
+            onFrame: async () => { await hands.send({image: videoElement}); },
             width: 640, height: 480
         });
 
-        camera.start().then(() => {
-            init();
-        });
+        camera.start().then(() => init());
     </script>
 </body>
 </html>
