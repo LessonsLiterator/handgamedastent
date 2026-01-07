@@ -3,25 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fairblock Cosmic Engine</title>
+    <title>Fairblock AR Engine</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
         #video_container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
-        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.4; display: block; }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.5; display: block; }
         #canvas { position: fixed; top: 0; left: 0; z-index: 1; pointer-events: none; }
         #loader {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
             color: #fff; z-index: 10; font-family: sans-serif;
-            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px);
             padding: 10px 25px; border-radius: 30px; font-size: 11px;
-            border: 1px solid rgba(88, 189, 246, 0.4); text-transform: uppercase; letter-spacing: 2px;
+            border: 1px solid rgba(255,255,255,0.2); text-transform: uppercase; letter-spacing: 2px;
         }
     </style>
 </head>
 <body>
-    <div id="loader">Fairblock System Loading...</div>
+    <div id="loader">Loading Fairblock System...</div>
     <div id="video_container"><video id="input_video" playsinline muted autoplay></video></div>
     <canvas id="canvas"></canvas>
 
@@ -33,12 +33,12 @@
 
         let particles = [];
         let logoPoints = [];
-        const particleCount = 4500; 
+        let logoSize = { w: 0, h: 0 };
+        const particleCount = 5000; 
         let handPos = { x: 0.5, y: 0.5, isFist: false };
         let lastFistState = false;
 
-        const brandColors = ['#58BDF6', '#718BD2', '#FFFFFF'];
-        const starColors = ['#ffffff', '#fffce0', '#d0e8ff'];
+        const BLUE_BG = '#5bc0f8'; // Цвет фона с твоего фото
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -57,6 +57,8 @@
                 const th = tw * (logoImg.height / logoImg.width);
                 tempCanvas.width = tw;
                 tempCanvas.height = th;
+                logoSize = { w: tw + 60, h: th + 40 }; // Размер синего бокса с отступами
+
                 tCtx.drawImage(logoImg, 0, 0, tw, th);
                 const imageData = tCtx.getImageData(0, 0, tw, th).data;
                 
@@ -64,13 +66,8 @@
                 for (let y = 0; y < th; y += 2) {
                     for (let x = 0; x < tw; x += 2) {
                         const i = (y * tw + x) * 4;
-                        const r = imageData[i];
-                        const g = imageData[i+1];
-                        const b = imageData[i+2];
-
-                        // ФИЛЬТР: Ищем черные пиксели логотипа (R,G,B должны быть низкими)
-                        // Это игнорирует ярко-голубой фон
-                        if (r < 60 && g < 60 && b < 60) {
+                        // Детекция ЧЕРНОГО логотипа (как на фото)
+                        if (imageData[i] < 100 && imageData[i+1] < 100 && imageData[i+2] < 100) {
                             rawPoints.push({ x: x - tw/2, y: y - th/2 });
                         }
                     }
@@ -84,15 +81,15 @@
             constructor() {
                 this.x = Math.random() * canvas.width;
                 this.y = Math.random() * canvas.height;
-                this.size = Math.random() * 1.6 + 0.4;
-                this.vx = (Math.random() - 0.5) * 2;
-                this.vy = (Math.random() - 0.5) * 2;
-                this.color = starColors[Math.floor(Math.random() * starColors.length)];
+                this.size = Math.random() * 1.5 + 0.3;
+                this.vx = (Math.random() - 0.5) * 1.5;
+                this.vy = (Math.random() - 0.5) * 1.5;
+                this.color = '#ffffff';
             }
 
             explode() {
                 const angle = Math.random() * Math.PI * 2;
-                const speed = 40 + Math.random() * 50;
+                const speed = 35 + Math.random() * 45;
                 this.vx = Math.cos(angle) * speed;
                 this.vy = Math.sin(angle) * speed;
             }
@@ -104,17 +101,16 @@
                     const tx = (handPos.x * canvas.width) + pt.x;
                     const ty = (handPos.y * canvas.height) + pt.y;
 
-                    this.x += (tx - this.x) * 0.28; 
-                    this.y += (ty - this.y) * 0.28;
-                    this.color = brandColors[idx % brandColors.length];
+                    this.x += (tx - this.x) * 0.25; 
+                    this.y += (ty - this.y) * 0.25;
+                    this.color = '#ffffff';
                 } else {
                     this.x += this.vx;
                     this.y += this.vy;
                     this.vx *= 0.96;
                     this.vy *= 0.96;
-                    this.color = starColors[Math.floor(Math.random() * starColors.length)];
-                    if (Math.abs(this.vx) < 0.2) this.vx += (Math.random() - 0.5) * 0.4;
-                    if (Math.abs(this.vy) < 0.2) this.vy += (Math.random() - 0.5) * 0.4;
+                    this.color = (Math.random() > 0.1) ? '#ffffff' : '#A0D8F1';
+                    
                     if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
                     if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
                 }
@@ -136,6 +132,24 @@
 
         function loop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Если кулак сжат — рисуем синий фон как на фото
+            if (handPos.isFist && logoSize.w > 0) {
+                ctx.save();
+                ctx.translate(handPos.x * canvas.width, handPos.y * canvas.height);
+                ctx.fillStyle = BLUE_BG;
+                ctx.shadowBlur = 40;
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                // Рисуем скругленный прямоугольник
+                const r = 15;
+                const w = logoSize.w;
+                const h = logoSize.h;
+                ctx.beginPath();
+                ctx.roundRect(-w/2, -h/2, w, h, 20);
+                ctx.fill();
+                ctx.restore();
+            }
+
             for (let p of particles) {
                 p.update();
                 p.draw();
