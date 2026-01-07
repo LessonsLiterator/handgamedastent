@@ -3,38 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fairblock Particle AR</title>
+    <title>Fairblock Ultra Density</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
         #video_container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
-        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.45; display: block; }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.4; display: block; }
         #canvas { position: fixed; top: 0; left: 0; z-index: 1; pointer-events: none; }
         #loader {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
             color: #fff; z-index: 10; font-family: sans-serif;
-            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px);
-            padding: 12px 25px; border-radius: 30px; font-size: 11px;
-            border: 1px solid rgba(88, 189, 246, 0.3); text-transform: uppercase; letter-spacing: 2px;
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px);
+            padding: 10px 20px; border-radius: 20px; font-size: 11px;
+            border: 1px solid #5bc0f8; text-transform: uppercase; letter-spacing: 2px;
         }
     </style>
 </head>
 <body>
-    <div id="loader">Fairblock System Initializing...</div>
+    <div id="loader">Оптимизация плотности...</div>
     <div id="video_container"><video id="input_video" playsinline muted autoplay></video></div>
     <canvas id="canvas"></canvas>
 
     <script>
         const videoElement = document.getElementById('input_video');
         const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d', { alpha: true });
+        const ctx = canvas.getContext('2d', { alpha: false });
         const loader = document.getElementById('loader');
 
         let particles = [];
         let logoPoints = [];
         let bgPoints = [];
-        const totalParticles = 7500; 
+        const totalParticles = 10000; // Максимальная кучность
         let handPos = { x: 0.5, y: 0.5, isFist: false };
         let lastFistState = false;
 
@@ -53,7 +53,9 @@
             logoImg.onload = () => {
                 const tempCanvas = document.createElement('canvas');
                 const tCtx = tempCanvas.getContext('2d');
-                const tw = 750; // Ширина логотипа в пикселях
+                
+                // УМЕНЬШАЕМ размер сканирования для повышения плотности
+                const tw = 450; 
                 const th = tw * (logoImg.height / logoImg.width);
                 tempCanvas.width = tw;
                 tempCanvas.height = th;
@@ -63,27 +65,27 @@
                 logoPoints = [];
                 bgPoints = [];
 
-                for (let y = 0; y < th; y += 2) {
-                    for (let x = 0; x < tw; x += 2) {
+                // СКАНЕР КАЖДОГО ПИКСЕЛЯ (шаг 1)
+                for (let y = 0; y < th; y++) {
+                    for (let x = 0; x < tw; x++) {
                         const i = (y * tw + x) * 4;
                         const r = imageData[i], g = imageData[i+1], b = imageData[i+2], a = imageData[i+3];
 
-                        // 1. Ищем черный текст (логотип)
-                        if (a > 200 && r < 80 && g < 80 && b < 80) {
-                            logoPoints.push({ x: x - tw/2, y: y - th/2, type: 'logo' });
-                        } 
-                        // 2. Ищем синий фон
-                        else if (a > 200 && r > 50 && g > 150 && b > 200) {
-                            bgPoints.push({ x: x - tw/2, y: y - th/2, type: 'bg' });
+                        if (a > 200) {
+                            if (r < 80 && g < 80 && b < 80) {
+                                logoPoints.push({ x: x - tw/2, y: y - th/2 });
+                            } else if (r > 50 && g > 150 && b > 200) {
+                                bgPoints.push({ x: x - tw/2, y: y - th/2 });
+                            }
                         }
                     }
                 }
-                // Перемешиваем, чтобы слетались красиво
+                // Перемешивание для органичного слетания
                 logoPoints.sort(() => Math.random() - 0.5);
                 bgPoints.sort(() => Math.random() - 0.5);
                 
                 initParticles();
-                loader.innerText = "Fairblock AR Ready";
+                loader.innerText = "Fairblock High-Res Ready";
             };
         }
 
@@ -92,13 +94,11 @@
                 this.id = id;
                 this.x = Math.random() * canvas.width;
                 this.y = Math.random() * canvas.height;
-                this.vx = (Math.random() - 0.5) * 2;
-                this.vy = (Math.random() - 0.5) * 2;
-                this.baseSize = Math.random() * 1.4 + 0.3;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.baseSize = Math.random() * 1.2 + 0.5;
                 this.size = this.baseSize;
-                this.color = '#ffffff';
-                // Определяем роль частицы заранее
-                this.role = (id < 2500) ? 'logo' : 'bg'; 
+                this.role = (id < 4000) ? 'logo' : 'bg'; // Больше на фон, меньше на текст
             }
 
             explode() {
@@ -114,30 +114,27 @@
                     if (this.role === 'logo' && logoPoints.length > 0) {
                         target = logoPoints[this.id % logoPoints.length];
                         this.color = '#ffffff';
-                        this.size = this.baseSize * 1.3;
                     } else if (bgPoints.length > 0) {
                         target = bgPoints[this.id % bgPoints.length];
                         this.color = BLUE_COLOR;
-                        this.size = this.baseSize;
                     }
 
                     if (target) {
                         const tx = (handPos.x * canvas.width) + target.x;
                         const ty = (handPos.y * canvas.height) + target.y;
-                        this.x += (tx - this.x) * 0.28;
-                        this.y += (ty - this.y) * 0.28;
+                        // УСИЛЕННЫЙ ТЯГ (0.35)
+                        this.x += (tx - this.x) * 0.35;
+                        this.y += (ty - this.y) * 0.35;
                     }
                 } else {
-                    // Режим космоса
                     this.x += this.vx;
                     this.y += this.vy;
-                    this.vx *= 0.96;
-                    this.vy *= 0.96;
-                    this.color = (this.id % 10 === 0) ? '#A0D8F1' : '#ffffff';
-                    this.size = this.baseSize;
-
-                    if (Math.abs(this.vx) < 0.2) this.vx += (Math.random() - 0.5) * 0.5;
-                    if (Math.abs(this.vy) < 0.2) this.vy += (Math.random() - 0.5) * 0.5;
+                    this.vx *= 0.95;
+                    this.vy *= 0.95;
+                    this.color = (this.id % 12 === 0) ? BLUE_COLOR : '#ffffff';
+                    
+                    if (Math.abs(this.vx) < 0.2) this.vx += (Math.random() - 0.5) * 0.4;
+                    if (Math.abs(this.vy) < 0.2) this.vy += (Math.random() - 0.5) * 0.4;
 
                     if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
                     if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
@@ -157,13 +154,16 @@
             for (let i = 0; i < totalParticles; i++) {
                 particles.push(new Particle(i));
             }
-            // Сортируем частицы так, чтобы 'logo' рисовались последними (поверх синих)
+            // Logo рисуем ПОСЛЕДНИМ, чтобы текст был поверх синего фона
             particles.sort((a, b) => (a.role === 'logo' ? 1 : -1));
             loop();
         }
 
         function loop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Очистка через черный для лучшей контрастности
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
             for (let p of particles) {
                 p.update();
                 p.draw();
